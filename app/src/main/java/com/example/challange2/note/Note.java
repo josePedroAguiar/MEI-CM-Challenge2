@@ -1,4 +1,4 @@
-package com.example.challange2;
+package com.example.challange2.note;
 
 public class Note {
     private String title;

@@ -12,6 +12,11 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
 
+import com.example.challange2.note.Note;
+
+import java.util.ArrayList;
+import java.util.List;
+
 
 public class NoteDetailFragment extends Fragment {
 
@@ -32,7 +37,6 @@ public class NoteDetailFragment extends Fragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
         // Find UI elements
         EditText titleEditText = view.findViewById(R.id.titleEditText);
         EditText contentEditText = view.findViewById(R.id.contentEditText);

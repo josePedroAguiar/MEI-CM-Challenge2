@@ -1,4 +1,4 @@
-package com.example.challange2;
+package com.example.challange2.note;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -7,9 +7,13 @@ import android.view.ViewGroup;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.challange2.R;
+import com.example.challange2.note.Note;
+import com.example.challange2.note.NoteViewHolder;
+
 import java.util.List;
 
-public class NoteListAdapter extends RecyclerView.Adapter<NoteViewHolder> {
+public class NoteListAdapter extends RecyclerView.Adapter<NoteViewHolder>  {
     private List<Note> notes;
     private OnNoteClickListener onNoteClickListener;
     private OnNoteLongClickListener onNoteLongClickListener;

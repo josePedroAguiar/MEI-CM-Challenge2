@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "432899983882",
+    "project_id": "challange2-7bf50",
+    "storage_bucket": "challange2-7bf50.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:432899983882:android:bc5ec6e645693ac5b96df3",
+        "android_client_info": {
+          "package_name": "com.example.challange2"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCzAcBH5JfOX0pIwsS-go1uHSUCEjZBNZg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

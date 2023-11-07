@@ -1,0 +1,16 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/action_back"
+        android:icon="@drawable/baseline_arrow_back_24"
+        android:title="Back"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/action_save"
+        android:icon="@drawable/baseline_save_24"
+        android:title="Save"
+        app:showAsAction="always" />
+
+</menu>

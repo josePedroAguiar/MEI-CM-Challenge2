@@ -1,11 +1,19 @@
 package com.example.challange2;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import android.app.AlertDialog;
 import android.os.Bundle;
+import android.text.InputType;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
+import android.widget.EditText;
 import android.widget.Toast;
 
 import com.example.challange2.note.Note;
@@ -18,6 +26,9 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     public List<Note> dummyNotes = new ArrayList<>();
+    NoteListFragment homeFragment = new NoteListFragment();
+    LoginFragment loginFragment = new LoginFragment();
+    NoteDetailFragment noteDetailFragment = new NoteDetailFragment();
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -35,10 +46,11 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, currentUser.getEmail(), Toast.LENGTH_SHORT).show();
             loadHomeFragment();
         }
+
     }
     private void loadLoginFragment() {
         // Create a new instance of LoginFragment
-        LoginFragment loginFragment = new LoginFragment();
+
 
         // Get the FragmentManager and start a transaction
         FragmentManager fragmentManager = getSupportFragmentManager();
@@ -52,7 +64,7 @@ public class MainActivity extends AppCompatActivity {
     }
     private void loadHomeFragment() {
         // Create a new instance of HomeFragment
-        NoteListFragment homeFragment = new NoteListFragment();
+
 
         // Get the FragmentManager and start a transaction
         FragmentManager fragmentManager = getSupportFragmentManager();
@@ -79,6 +91,42 @@ public class MainActivity extends AppCompatActivity {
             //super.getSupportFragmentManager().popBackStack();
             super.onBackPressed(); // If not on HomeFragment, proceed with default behavior
         }
+    }
+   /* public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+
+        if(homeFragment.isVisible()) {
+            menu.clear();
+        inflater.inflate(R.menu.main_menu, menu);}
+        if(noteDetailFragment.isVisible()) {
+            menu.clear();
+            inflater.inflate(R.menu.detail_menu, menu);
+        }
+
+        return true;
+    }*/
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        if (item.getItemId() == R.id.action_search) {
+            // Handle search action
+            if(homeFragment.isVisible())
+                homeFragment.showSearchDialog();
+            if(!noteDetailFragment.isVisible())
+                homeFragment.addNewNote("New Title","");
+            return true;
+        }
+        if (item.getItemId() == R.id.action_new_note) {
+            // Handle search action
+            if(homeFragment.isVisible())
+                homeFragment.addNewNote("New Title","");
+            return true;
+        }
+        if (item.getItemId() == R.id.action_back) {
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+
     }
 
 

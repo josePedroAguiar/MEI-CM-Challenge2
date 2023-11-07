@@ -42,7 +42,8 @@ public class LoginFragment extends Fragment {
             public void onClick(View v) {
                 String username = usernameEditText.getText().toString();
                 String password = passwordEditText.getText().toString();
-                loginUser(username, password);
+                if(!username.equals("") && !password.equals(""))
+                    loginUser(username, password);
             }
         });
 
@@ -50,8 +51,13 @@ public class LoginFragment extends Fragment {
             @Override
             public void onClick(View v) {
                 // Navigate to the registration fragment or perform registration here
+                String username = usernameEditText.getText().toString();
+                String password = passwordEditText.getText().toString();
+                if(!username.equals("") && !password.equals(""))
+                    registerUser(username, password);
             }
         });
+        
 
         return view;
     }
@@ -76,5 +82,31 @@ public class LoginFragment extends Fragment {
                     }
                 });
     }
+    private void registerUser(String email, String password) {
+        mAuth.createUserWithEmailAndPassword(email, password)
+                .addOnCompleteListener(requireActivity(), task -> {
+                    if (task.isSuccessful()) {
+                        // Registration success, you can perform additional actions here if needed
+                        // For example, you might want to save user information in a database
+                        Toast.makeText(getContext(), "Registration successful.", Toast.LENGTH_SHORT).show();
+
+                        // After successful registration, you can navigate to the next fragment
+                        FragmentManager fragmentManager = getParentFragmentManager();
+                        FragmentTransaction transaction = fragmentManager.beginTransaction();
+
+                        // Replace "YourNextFragment" with the actual fragment you want to navigate to
+                        NoteListFragment newFragment = new NoteListFragment();
+                        transaction.replace(R.id.fragmentContainer, newFragment);
+                        transaction.addToBackStack(null);
+
+                        transaction.commit();
+                    } else {
+                        // If registration fails, display a message to the user.
+                        Toast.makeText(getContext(), "Registration failed. " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+
+
 
 }

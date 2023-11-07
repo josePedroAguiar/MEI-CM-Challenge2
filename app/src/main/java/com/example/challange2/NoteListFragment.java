@@ -28,8 +28,11 @@ import android.widget.Toast;
 import com.example.challange2.note.Note;
 import com.example.challange2.note.NoteListAdapter;
 import com.google.android.material.appbar.AppBarLayout;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,7 +43,8 @@ import java.util.List;
 public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNoteClickListener, NoteListAdapter.OnNoteLongClickListener {
 
     List<Note> dummyNotes = new ArrayList<>();
-    private NoteListAdapter noteListAdapter;
+    NoteListAdapter noteListAdapter;
+    FirebaseFirestore db = FirebaseFirestore.getInstance();
 
     public void onCreateOptionsMenu(Menu menu,MenuInflater inflater) {
         menu.clear(); // clears all menu items..
@@ -194,13 +198,23 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
 
     public void addNewNote(String title, String content) {
         // Create a new Note object
-        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("notes");
-
         Note newNote = new Note(title, content);
 
         // Add the new note to the list
         dummyNotes.add(newNote);
-        databaseReference.push().setValue(newNote);
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+        FirebaseUser currentUser = auth.getCurrentUser();
+        db.collection(currentUser.getEmail())
+                .add(newNote)
+                .addOnSuccessListener(documentReference -> {
+                    // Note added successfully
+                    String noteId = documentReference.getId();
+                    // You can do further operations here if needed
+                })
+                .addOnFailureListener(e -> {
+                    // Handle any errors here
+                    Toast.makeText(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                });
 
         // Notify the adapter that the data set has changed
         noteListAdapter.notifyDataSetChanged();

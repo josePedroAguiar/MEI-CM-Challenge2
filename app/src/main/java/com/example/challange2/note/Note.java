@@ -1,8 +1,12 @@
 package com.example.challange2.note;
 
+import java.util.Date;
+
 public class Note {
     private String title;
     private String content;
+    private String username;
+    private Date date;
 
     public Note(String title, String content) {
         this.title = title;

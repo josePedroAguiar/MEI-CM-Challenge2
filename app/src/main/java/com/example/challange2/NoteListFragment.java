@@ -28,6 +28,8 @@ import android.widget.Toast;
 import com.example.challange2.note.Note;
 import com.example.challange2.note.NoteListAdapter;
 import com.google.android.material.appbar.AppBarLayout;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -192,10 +194,13 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
 
     public void addNewNote(String title, String content) {
         // Create a new Note object
+        DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference("notes");
+
         Note newNote = new Note(title, content);
 
         // Add the new note to the list
         dummyNotes.add(newNote);
+        databaseReference.push().setValue(newNote);
 
         // Notify the adapter that the data set has changed
         noteListAdapter.notifyDataSetChanged();

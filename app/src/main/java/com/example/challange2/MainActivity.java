@@ -62,11 +62,12 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         FirebaseAuth auth = FirebaseAuth.getInstance();
         FirebaseUser currentUser = auth.getCurrentUser();
-        retriveNotes(currentUser);
+
         if (currentUser == null) {
             loadLoginFragment();
         }
         else {
+            retriveNotes(currentUser);
             Toast.makeText(this, currentUser.getEmail(), Toast.LENGTH_SHORT).show();
             loadHomeFragment();
         }

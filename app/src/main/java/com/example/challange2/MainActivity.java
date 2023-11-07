@@ -31,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
     protected void retriveNotes(FirebaseUser currentUser){
         // Assuming db is your instance of FirebaseFirestore
         FirebaseFirestore db = FirebaseFirestore.getInstance();
+
         // Assuming "notes" is your collection name
             db.collection(currentUser.getEmail())
                     .get()

@@ -12,8 +12,11 @@ import com.example.challange2.R;
 import com.example.challange2.note.Note;
 import com.example.challange2.note.NoteViewHolder;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+
 import android.widget.Filter;
 import android.widget.Filterable;
 
@@ -60,6 +63,14 @@ public class NoteListAdapter extends RecyclerView.Adapter<NoteViewHolder> implem
         Note note = notes.get(position);
         holder.titleTextView.setText(note.getTitle());
         holder.contentTextView.setText(note.getContent());
+        if(note.getDate()!=null){
+            SimpleDateFormat dateFormat = new SimpleDateFormat("hh:mm a | dd/MM", Locale.ENGLISH);
+            dateFormat.format(note.getDate());
+        holder.dateTextView.setText(dateFormat.format(note.getDate()));}
+        else
+            holder.dateTextView.setText("");
+
+
 
         holder.itemView.setOnClickListener(view -> {
             if (onNoteClickListener != null) {

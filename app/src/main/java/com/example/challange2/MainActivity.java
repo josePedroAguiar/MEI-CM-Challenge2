@@ -5,6 +5,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
+import com.google.firebase.Timestamp;
+
 import java.security.SecureRandom;
 import java.util.Base64;
 import android.app.Activity;
@@ -28,6 +30,8 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -50,7 +54,8 @@ public class MainActivity extends AppCompatActivity {
                                 // document.getData() will contain the note's data
                                 String title = (String) document.get("title");
                                 String content = (String) document.get("content");
-                                dummyNotes.add(new Note(title, content,document.getId()));
+                                Timestamp date = (Timestamp) document.get("date");
+                                dummyNotes.add(new Note(title, content,document.getId(),date.toDate()));
                                 Log.d("Debug", "Retrieved notes: " + dummyNotes.size());
                                 homeFragment.noteListAdapter.notifyDataSetChanged();
 
@@ -184,7 +189,10 @@ public class MainActivity extends AppCompatActivity {
         // Add the new note to the list
         Note newNote = new Note(title, content);
         newNote.setId(randomId);
+        Date currentDate = Calendar.getInstance().getTime();
+        newNote.setDate(currentDate);
         dummyNotes.add(newNote);
+
         if (currentUser!=null) {
             db.collection(currentUser.getEmail())
                     .document(randomId)

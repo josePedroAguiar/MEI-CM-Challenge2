@@ -31,6 +31,8 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 
@@ -188,6 +190,8 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
             if (!newTitle.isEmpty()) {
                 // Update the note with the new title
                 dummyNotes.get(position).setTitle(newTitle);
+                Date currentDate = Calendar.getInstance().getTime();
+                dummyNotes.get(position).setDate(currentDate);
 
                 // Notify the adapter that the data set has changed
                 noteListAdapter.notifyDataSetChanged();

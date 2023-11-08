@@ -19,6 +19,8 @@ import com.example.challange2.note.Note;
 import com.example.challange2.note.ToolbarHelper;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 
@@ -52,7 +54,7 @@ public class NoteDetailFragment extends Fragment {
         // Retrieve note ID from arguments
         Bundle args = getArguments();
         if (args != null) {
-            position= args.getInt("int", 0);
+            position= args.getInt("position", 0);
             String title = args.getString("title", "");
             String content = args.getString("content", "");
             titleEditText = view.findViewById(R.id.titleEditText);
@@ -81,10 +83,12 @@ public class NoteDetailFragment extends Fragment {
 
         String newTitle = titleEditText.getText().toString().trim();
         String newContent = contentEditText.getText().toString().trim();
-        note=((MainActivity) requireActivity()).dummyNotes.get(position);
+        note =((MainActivity) requireActivity()).dummyNotes.get(position);
         if (!newTitle.isEmpty()) {
             // Update the note in the list
             Note updatedNote = new Note(newTitle, newContent,note.getId());
+            Date currentDate = Calendar.getInstance().getTime();
+            updatedNote.setDate(currentDate);
             note=updatedNote;
             ((MainActivity) requireActivity()).dummyNotes.set(position, updatedNote);
 

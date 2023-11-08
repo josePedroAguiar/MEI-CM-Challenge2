@@ -24,6 +24,9 @@ import java.util.List;
 
 public class NoteDetailFragment extends Fragment {
     int position;
+    EditText titleEditText;
+    EditText contentEditText;
+    Note note;
 
     public void onCreateOptionsMenu(Menu menu,MenuInflater inflater) {
         menu.clear(); // clears all menu items..
@@ -52,8 +55,8 @@ public class NoteDetailFragment extends Fragment {
             position= args.getInt("int", 0);
             String title = args.getString("title", "");
             String content = args.getString("content", "");
-            EditText titleEditText = view.findViewById(R.id.titleEditText);
-            EditText contentEditText = view.findViewById(R.id.contentEditText);
+            titleEditText = view.findViewById(R.id.titleEditText);
+            contentEditText = view.findViewById(R.id.contentEditText);
 
             titleEditText.setText(title);
             contentEditText.setText(content);
@@ -66,25 +69,28 @@ public class NoteDetailFragment extends Fragment {
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         // Find UI elements
-        EditText titleEditText = view.findViewById(R.id.titleEditText);
-        EditText contentEditText = view.findViewById(R.id.contentEditText);
+         titleEditText = view.findViewById(R.id.titleEditText);
+         contentEditText = view.findViewById(R.id.contentEditText);
+
+
+
+
+    }
+
+    public void saveChanges() {
 
         String newTitle = titleEditText.getText().toString().trim();
         String newContent = contentEditText.getText().toString().trim();
-
-        // Check if both title and content are not empty
-        if (!newTitle.isEmpty() && !newContent.isEmpty() && position >= 0) {
+        note=((MainActivity) requireActivity()).dummyNotes.get(position);
+        if (!newTitle.isEmpty()) {
             // Update the note in the list
-            Note updatedNote = new Note(newTitle, newContent);
+            Note updatedNote = new Note(newTitle, newContent,note.getId());
+            note=updatedNote;
             ((MainActivity) requireActivity()).dummyNotes.set(position, updatedNote);
 
             // Notify the adapter that the data set has changed
             ((MainActivity) requireActivity()).homeFragment.noteListAdapter.notifyDataSetChanged();
-
-            // Save the updated note in Firebase (you can add your Firebase code here)
         }
-
-
     }
 
 }

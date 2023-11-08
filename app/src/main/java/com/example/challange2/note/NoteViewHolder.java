@@ -10,10 +10,12 @@ import com.example.challange2.R;
 
 public class NoteViewHolder extends RecyclerView.ViewHolder {
     public TextView titleTextView;
+    public TextView contentTextView;
 
     public NoteViewHolder(@NonNull View itemView) {
         super(itemView);
         titleTextView = itemView.findViewById(R.id.titleTextView);
+        contentTextView = itemView.findViewById(R.id.contentTextView);
     }
 }
 

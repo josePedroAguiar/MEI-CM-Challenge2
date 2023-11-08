@@ -1,5 +1,6 @@
 package com.example.challange2;
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.os.Bundle;
 
@@ -12,26 +13,20 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import android.text.InputType;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.ImageButton;
-import android.widget.SearchView;
 import android.widget.Toast;
 
 import com.example.challange2.note.Note;
 import com.example.challange2.note.NoteListAdapter;
-import com.google.android.material.appbar.AppBarLayout;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
+
 import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
@@ -44,7 +39,8 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
 
     List<Note> dummyNotes = new ArrayList<>();
     NoteListAdapter noteListAdapter;
-    FirebaseFirestore db = FirebaseFirestore.getInstance();
+
+
 
     public void onCreateOptionsMenu(Menu menu,MenuInflater inflater) {
         menu.clear(); // clears all menu items..
@@ -196,52 +192,8 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
         builder.show();
     }
 
-    public void addNewNote(String title, String content) {
-        // Create a new Note object
-        Note newNote = new Note(title, content);
-
-        // Add the new note to the list
-        dummyNotes.add(newNote);
-        FirebaseAuth auth = FirebaseAuth.getInstance();
-        FirebaseUser currentUser = auth.getCurrentUser();
-        db.collection(currentUser.getEmail())
-                .add(newNote)
-                .addOnSuccessListener(documentReference -> {
-                    // Note added successfully
-                    String noteId = documentReference.getId();
-                    // You can do further operations here if needed
-                })
-                .addOnFailureListener(e -> {
-                    // Handle any errors here
-                    Toast.makeText(getContext(), "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                });
-
-        // Notify the adapter that the data set has changed
-        noteListAdapter.notifyDataSetChanged();
-    }
-
-    public void showSearchDialog() {
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle("Search by Title");
-
-        // Create an EditText to allow the user to input a search query
-        final EditText input = new EditText(getContext());
-        input.setInputType(InputType.TYPE_CLASS_TEXT);
-        builder.setView(input);
-
-        builder.setPositiveButton("Search", (dialog, which) -> {
-            String searchQuery = input.getText().toString().trim();
-            if (!searchQuery.isEmpty()) {
-                noteListAdapter.getFilter().filter(searchQuery);
 
 
-            }
-        });
-
-        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
-
-        builder.show();
-    }
     private void onClearFilterButtonClick(View view) {
         // Implement the logic to clear the filter here
         if (noteListAdapter != null) {

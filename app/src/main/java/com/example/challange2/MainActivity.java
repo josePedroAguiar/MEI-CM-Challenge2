@@ -5,11 +5,15 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
+import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Bundle;
 
+import android.text.InputType;
 import android.util.Log;
 import android.view.MenuItem;
 
+import android.widget.EditText;
 import android.widget.Toast;
 
 import com.example.challange2.note.Note;
@@ -27,11 +31,11 @@ public class MainActivity extends AppCompatActivity {
     NoteListFragment homeFragment = new NoteListFragment();
     LoginFragment loginFragment = new LoginFragment();
     NoteDetailFragment noteDetailFragment = new NoteDetailFragment();
+    FirebaseFirestore db = FirebaseFirestore.getInstance();
+    FirebaseAuth auth = FirebaseAuth.getInstance();
+    FirebaseUser currentUser = auth.getCurrentUser();
 
     protected void retriveNotes(FirebaseUser currentUser){
-        // Assuming db is your instance of FirebaseFirestore
-        FirebaseFirestore db = FirebaseFirestore.getInstance();
-
         // Assuming "notes" is your collection name
             db.collection(currentUser.getEmail())
                     .get()
@@ -54,6 +58,8 @@ public class MainActivity extends AppCompatActivity {
                     });
 
     }
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -70,6 +76,7 @@ public class MainActivity extends AppCompatActivity {
             retriveNotes(currentUser);
             Toast.makeText(this, currentUser.getEmail(), Toast.LENGTH_SHORT).show();
             loadHomeFragment();
+            //homeFragment.noteListAdapter.notifyDataSetChanged();
         }
 
     }
@@ -134,16 +141,16 @@ public class MainActivity extends AppCompatActivity {
     public boolean onOptionsItemSelected(MenuItem item) {
         if (item.getItemId() == R.id.action_search) {
             // Handle search action
-                homeFragment.showSearchDialog();
+                showSearchDialog();
             return true;
         }
         if (item.getItemId() == R.id.action_new_note) {
             // Handle search action
-                homeFragment.addNewNote("New Title","");
+            addNewNote("New Title","");
             return true;
         }
         if (item.getItemId() == R.id.action_back) {
-
+            back();
             return true;
         }
         if (item.getItemId() == R.id.action_save) {
@@ -154,6 +161,75 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
 
     }
+    public void addNewNote(String title, String content) {
+        // Create a new Note object
+        Note newNote = new Note(title, content);
+
+        // Add the new note to the list
+        dummyNotes.add(newNote);
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+        FirebaseUser currentUser = auth.getCurrentUser();
+        if (currentUser!=null) {
+            db.collection(currentUser.getEmail())
+                    .add(newNote)
+                    .addOnSuccessListener(documentReference -> {
+                        // Note added successfully
+                        String noteId = documentReference.getId();
+                        // You can do further operations here if needed
+                    })
+                    .addOnFailureListener(e -> {
+                        // Handle any errors here
+                        Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    });
+
+            // Notify the adapter that the data set has changed
+
+        }
+
+    }
+
+    public void showSearchDialog() {
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setTitle("Search by Title");
+
+        // Create an EditText to allow the user to input a search query
+        final EditText input = new EditText(this);
+        input.setInputType(InputType.TYPE_CLASS_TEXT);
+        builder.setView(input);
+
+        builder.setPositiveButton("Search", (dialog, which) -> {
+            String searchQuery = input.getText().toString().trim();
+            if (!searchQuery.isEmpty()) {
+                homeFragment.noteListAdapter.getFilter().filter(searchQuery);
+
+
+            }
+        });
+
+        builder.setNegativeButton("Cancel", (dialog, which) -> dialog.cancel());
+
+        builder.show();
+    }
+    public void back() {
+        Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
+        if (currentFragment instanceof NoteDetailFragment) {
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            int backStackEntryCount = fragmentManager.getBackStackEntryCount();
+            for (int i = 0; i < backStackEntryCount; i++) {
+                fragmentManager.popBackStack();
+            }
+            // If it is, navigate back to the NoteListFragment
+            fragmentManager = getSupportFragmentManager();
+            FragmentTransaction transaction = fragmentManager.beginTransaction();
+            transaction.replace(R.id.fragmentContainer, homeFragment);
+            transaction.commit();
+
+        } else {
+            super.onBackPressed(); // If not on NoteDetailFragment, proceed with default behavior
+        }
+
+    }
+
 
 
 

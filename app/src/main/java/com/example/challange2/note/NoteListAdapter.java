@@ -59,6 +59,7 @@ public class NoteListAdapter extends RecyclerView.Adapter<NoteViewHolder> implem
     public void onBindViewHolder(@NonNull NoteViewHolder holder, int position) {
         Note note = notes.get(position);
         holder.titleTextView.setText(note.getTitle());
+        holder.contentTextView.setText(note.getContent());
 
         holder.itemView.setOnClickListener(view -> {
             if (onNoteClickListener != null) {
@@ -92,11 +93,13 @@ public class NoteListAdapter extends RecyclerView.Adapter<NoteViewHolder> implem
                 if (filterPattern.isEmpty()) {
                     filteredList.addAll(notes);
                 } else {
+                    if(filteredList!=null){
                     for (Note note : notes) {
                         if (note.getTitle().toLowerCase().contains(filterPattern)) {
                             filteredList.add(note);
                         }
                     }
+                }
                 }
 
                 FilterResults results = new FilterResults();

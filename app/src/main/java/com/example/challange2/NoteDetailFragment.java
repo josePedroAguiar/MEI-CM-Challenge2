@@ -23,7 +23,7 @@ import java.util.List;
 
 
 public class NoteDetailFragment extends Fragment {
-
+    int position;
 
     public void onCreateOptionsMenu(Menu menu,MenuInflater inflater) {
         menu.clear(); // clears all menu items..
@@ -43,12 +43,24 @@ public class NoteDetailFragment extends Fragment {
 
 
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
-        // Inflate the layout for this fragment
-        //ToolbarHelper.setupToolbarButtons(this, R.drawable.baseline_arrow_back_24, R.drawable.baseline_save_24);
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_note_detail, container, false);
 
-        return inflater.inflate(R.layout.fragment_note_detail, container, false);
+        // Retrieve note ID from arguments
+        Bundle args = getArguments();
+        if (args != null) {
+            position= args.getInt("int", 0);
+            String title = args.getString("title", "");
+            String content = args.getString("content", "");
+            EditText titleEditText = view.findViewById(R.id.titleEditText);
+            EditText contentEditText = view.findViewById(R.id.contentEditText);
+
+            titleEditText.setText(title);
+            contentEditText.setText(content);
+            List<Note> dummyNotes = ((MainActivity) requireActivity()).dummyNotes;
+            dummyNotes.get(position);
+        }
+        return view;
     }
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
@@ -56,6 +68,21 @@ public class NoteDetailFragment extends Fragment {
         // Find UI elements
         EditText titleEditText = view.findViewById(R.id.titleEditText);
         EditText contentEditText = view.findViewById(R.id.contentEditText);
+
+        String newTitle = titleEditText.getText().toString().trim();
+        String newContent = contentEditText.getText().toString().trim();
+
+        // Check if both title and content are not empty
+        if (!newTitle.isEmpty() && !newContent.isEmpty() && position >= 0) {
+            // Update the note in the list
+            Note updatedNote = new Note(newTitle, newContent);
+            ((MainActivity) requireActivity()).dummyNotes.set(position, updatedNote);
+
+            // Notify the adapter that the data set has changed
+            ((MainActivity) requireActivity()).homeFragment.noteListAdapter.notifyDataSetChanged();
+
+            // Save the updated note in Firebase (you can add your Firebase code here)
+        }
 
 
     }

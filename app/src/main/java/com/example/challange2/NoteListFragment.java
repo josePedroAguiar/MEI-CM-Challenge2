@@ -9,6 +9,7 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -52,7 +53,7 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_notelist, container, false);
-        Button clearFilterButton;
+        /*Button clearFilterButton;
         clearFilterButton = view.findViewById(R.id.clearFilterButton);
         noteListAdapter = new NoteListAdapter(dummyNotes);
         if(noteListAdapter.getFilterPattern().equals(""))
@@ -64,7 +65,7 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
             public void onClick(View v) {
                 onClearFilterButtonClick(v);
             }
-        });
+        });*/
         //ArrayList<ImageButton>buttons=setupToolbarButtons(R.drawable.baseline_add_24, R.drawable.baseline_search_24);
         /*buttons.get(0).setOnClickListener(new View.OnClickListener() {
             @Override
@@ -122,15 +123,21 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
     public void onNoteClick(int position) {
         // Navigate to NoteDetailFragment and pass the selected note's data as arguments
         Bundle args = new Bundle();
+        NoteDetailFragment noteDetailFragment = new NoteDetailFragment();
+        args.putInt("position",position);
         args.putString("title", dummyNotes.get(position).getTitle());
         args.putString("content", dummyNotes.get(position).getContent());
-        Toast.makeText(getContext(), "CLICK NOTE.", Toast.LENGTH_SHORT).show();
-        NoteDetailFragment fragment = new NoteDetailFragment();
 
-        getParentFragmentManager().beginTransaction()
-                .replace(R.id.fragmentContainer, fragment)
-                .addToBackStack(null)
-                .commit();
+        Toast.makeText(getContext(), "CLICK NOTE.", Toast.LENGTH_SHORT).show();
+
+        noteDetailFragment.setArguments(args);
+
+        // Navigate to NoteDetailFragment
+        FragmentTransaction transaction = getParentFragmentManager().beginTransaction();
+        transaction.replace(R.id.fragmentContainer, noteDetailFragment);
+        transaction.addToBackStack(null); // Add to back stack
+        transaction.commit();
+
     }
 
     @Override

@@ -4,7 +4,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-
+import java.security.SecureRandom;
+import java.util.Base64;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.os.Bundle;
@@ -23,8 +24,11 @@ import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
 
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.List;
+import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
     public List<Note> dummyNotes = new ArrayList<>();
@@ -45,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
                                 // document.getData() will contain the note's data
                                 String title = (String) document.get("title");
                                 String content = (String) document.get("content");
-                                dummyNotes.add(new Note(title, content));
+                                dummyNotes.add(new Note(title, content,document.getId()));
                                 Log.d("Debug", "Retrieved notes: " + dummyNotes.size());
                                 homeFragment.noteListAdapter.notifyDataSetChanged();
 
@@ -154,6 +158,8 @@ public class MainActivity extends AppCompatActivity {
             return true;
         }
         if (item.getItemId() == R.id.action_save) {
+
+            updateNoteInFirestore();
             //noteDetailFragment.saveNote()
             return true;
         }
@@ -161,21 +167,29 @@ public class MainActivity extends AppCompatActivity {
         return super.onOptionsItemSelected(item);
 
     }
-    public void addNewNote(String title, String content) {
-        // Create a new Note object
-        Note newNote = new Note(title, content);
+    public static String generateRandomUUID() {
+        UUID uuid = UUID.randomUUID();
+        return uuid.toString();
+    }
 
-        // Add the new note to the list
-        dummyNotes.add(newNote);
+    public void addNewNote(String title, String content) {
+
+
+        String randomId = generateRandomUUID();
         FirebaseAuth auth = FirebaseAuth.getInstance();
         FirebaseUser currentUser = auth.getCurrentUser();
+
+        // Create a new Note object
+        // Add the new note to the list
+        Note newNote = new Note(title, content);
+        newNote.setId(randomId);
+        dummyNotes.add(newNote);
         if (currentUser!=null) {
             db.collection(currentUser.getEmail())
-                    .add(newNote)
+                    .document(randomId)
+                    .set(newNote)
                     .addOnSuccessListener(documentReference -> {
-                        // Note added successfully
-                        String noteId = documentReference.getId();
-                        // You can do further operations here if needed
+
                     })
                     .addOnFailureListener(e -> {
                         // Handle any errors here
@@ -228,6 +242,18 @@ public class MainActivity extends AppCompatActivity {
             super.onBackPressed(); // If not on NoteDetailFragment, proceed with default behavior
         }
 
+    }
+    private void updateNoteInFirestore() {
+        Note note= dummyNotes.get(noteDetailFragment.position);
+        db.collection(currentUser.getEmail())
+                .document(note.getId())
+                .update("title", note.getTitle(), "content",note.getContent())
+                .addOnSuccessListener(aVoid -> {
+                    // Handle successful update
+                })
+                .addOnFailureListener(e -> {
+                    // Handle failed update
+                });
     }
 
 

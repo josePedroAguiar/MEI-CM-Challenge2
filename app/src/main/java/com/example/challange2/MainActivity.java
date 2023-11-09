@@ -127,12 +127,21 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public void onBackPressed() {
         // Get the current fragment
+
         Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
 
         // Check if the current fragment is the HomeFragment
         if (currentFragment instanceof NoteListFragment) {
             // Log out the user
             FirebaseAuth.getInstance().signOut();
+
+            FragmentManager fragmentManager = getSupportFragmentManager();
+            int backStackEntryCount = fragmentManager.getBackStackEntryCount();
+            for (int i = 0; i < backStackEntryCount; i++) {
+                fragmentManager.popBackStack();
+            }
+
+
             loadLoginFragment();
         } else {
             //super.getSupportFragmentManager().popBackStack();
@@ -176,7 +185,7 @@ public class MainActivity extends AppCompatActivity {
         if (item.getItemId() == R.id.action_save) {
 
             updateNoteInFirestore();
-            //noteDetailFragment.saveNote()
+            //noteDetailFragment.saveNote();
             return true;
         }
 
@@ -210,6 +219,11 @@ public class MainActivity extends AppCompatActivity {
                         .addOnFailureListener(e -> {
 
                         });
+
+                // Notify the adapter that the data set has changed
+                NoteListFragment noteListFragment = (NoteListFragment) getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
+                noteListFragment.noteListAdapter.notifyDataSetChanged();
+
             }
         });
     }

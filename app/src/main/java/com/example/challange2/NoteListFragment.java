@@ -86,6 +86,7 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
 
             }
         });*/
+
         Toolbar toolbar = getActivity().findViewById(R.id.tb);
 
         if (getActivity() instanceof AppCompatActivity) {

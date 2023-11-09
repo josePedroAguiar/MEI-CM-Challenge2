@@ -1,8 +1,15 @@
 package com.example.challange2;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.os.Bundle;
+import android.text.InputType;
+import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -13,44 +20,32 @@ import androidx.fragment.app.FragmentTransaction;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import android.text.InputType;
-import android.view.LayoutInflater;
-import android.view.Menu;
-import android.view.MenuInflater;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.EditText;
-import android.widget.Toast;
-
 import com.example.challange2.note.Note;
 import com.example.challange2.note.NoteListAdapter;
-import com.google.firebase.auth.FirebaseAuth;
-import com.google.firebase.auth.FirebaseUser;
-
-import com.google.firebase.firestore.FirebaseFirestore;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
 
-
-
-public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNoteClickListener, NoteListAdapter.OnNoteLongClickListener {
+public class NoteListFragment extends Fragment implements NoteListAdapter.OnNoteClickListener, NoteListAdapter.OnNoteLongClickListener {
 
     List<Note> dummyNotes = new ArrayList<>();
     NoteListAdapter noteListAdapter;
 
+    EditText titleEditText;
+    Note note;
 
-
-    public void onCreateOptionsMenu(Menu menu,MenuInflater inflater) {
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         menu.clear(); // clears all menu items..
         //getActivity().onCreateOptionsMenu(menu);
         getActivity().getMenuInflater().inflate(R.menu.main_menu, menu);
         super.onCreateOptionsMenu(menu, inflater);
     }
+
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
@@ -98,7 +93,6 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
         }
 
 
-
         return view;
     }
 
@@ -109,7 +103,8 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
 
         // Dummy data (replace with actual data source)
         if (getActivity() instanceof MainActivity) {
-            dummyNotes=((MainActivity) getActivity()).dummyNotes;
+            dummyNotes = ((MainActivity) getActivity()).dummyNotes;
+            sortNotesByTitle(dummyNotes);
         }
 
         // Set up RecyclerView
@@ -126,7 +121,7 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
         // Navigate to NoteDetailFragment and pass the selected note's data as arguments
         Bundle args = new Bundle();
         NoteDetailFragment noteDetailFragment = new NoteDetailFragment();
-        args.putInt("position",position);
+        args.putInt("position", position);
         args.putString("title", dummyNotes.get(position).getTitle());
         args.putString("content", dummyNotes.get(position).getContent());
 
@@ -140,13 +135,14 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
         transaction.addToBackStack(null); // Add to back stack
         transaction.commit();
 
+
     }
 
     @Override
     public void onNoteLongClick(int position) {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         builder.setTitle("Choose an option")
-                .setItems(new CharSequence[]{"Erase Note", "Change Title","Cancel"}, (dialog, which) -> {
+                .setItems(new CharSequence[]{"Erase Note", "Change Title", "Cancel"}, (dialog, which) -> {
                     switch (which) {
                         case 0:
                             // Erase Note
@@ -165,13 +161,17 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
         Toast.makeText(getContext(), "LONG CLICK NOTE.", Toast.LENGTH_SHORT).show();
 
     }
+
     private void eraseNote(int position) {
         //TODO: Implement the logic to erase the note
-            // Remove the note from the list
-            dummyNotes.remove(position);
+        // Remove the note from the list
+        Note noteToRemove = dummyNotes.get(position);
+        dummyNotes.remove(position);
 
-            // Notify the adapter that the data set has changed
-            noteListAdapter.notifyDataSetChanged();
+        // Notify the adapter that the data set has changed
+        noteListAdapter.notifyDataSetChanged();
+        ((MainActivity) requireActivity()).eraseNoteInFirestore(noteToRemove);
+
 
     }
 
@@ -185,6 +185,7 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
         input.setInputType(InputType.TYPE_CLASS_TEXT);
         builder.setView(input);
 
+
         builder.setPositiveButton("Save", (dialog, which) -> {
             String newTitle = input.getText().toString().trim();
             if (!newTitle.isEmpty()) {
@@ -195,6 +196,9 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
 
                 // Notify the adapter that the data set has changed
                 noteListAdapter.notifyDataSetChanged();
+                ((MainActivity) requireActivity()).updateNoteTitleInFirestore(position);
+
+
             }
         });
 
@@ -202,7 +206,6 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
 
         builder.show();
     }
-
 
 
     private void onClearFilterButtonClick(View view) {
@@ -214,6 +217,16 @@ public class NoteListFragment extends Fragment  implements NoteListAdapter.OnNot
 
 
         }
+    }
+
+    private void sortNotesByTitle(List<Note> notes) {
+        Collections.sort(notes, new Comparator<Note>() {
+            @Override
+            public int compare(Note note1, Note note2) {
+                // Comparação decrescente usando a data
+                return note2.getDate().compareTo(note1.getDate());
+            }
+        });
     }
 
 

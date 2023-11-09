@@ -72,6 +72,12 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void clearSearchFilter() {
+        homeFragment.noteListAdapter.getFilter().filter("searchQuery");
+
+        int num = 1;
+        num++;
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -166,6 +172,11 @@ public class MainActivity extends AppCompatActivity {
                 showSearchDialog();
             return true;
         }
+
+        if (item.getItemId() == R.id.action_clear_search) {
+            clearSearchFilter();
+            return true;
+        }
         if (item.getItemId() == R.id.action_new_note) {
             // Handle search action
             addNewNote("New Title","");
@@ -238,8 +249,6 @@ public class MainActivity extends AppCompatActivity {
             String searchQuery = input.getText().toString().trim();
             if (!searchQuery.isEmpty()) {
                 homeFragment.noteListAdapter.getFilter().filter(searchQuery);
-
-
             }
         });
 

@@ -7,12 +7,11 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 import com.google.firebase.Timestamp;
 
-import java.security.SecureRandom;
-import java.util.Base64;
-import android.app.Activity;
+
 import android.app.AlertDialog;
 import android.os.Bundle;
 
+import android.os.Handler;
 import android.text.InputType;
 import android.util.Log;
 import android.view.MenuItem;
@@ -43,9 +42,12 @@ public class MainActivity extends AppCompatActivity {
     FirebaseFirestore db = FirebaseFirestore.getInstance();
     FirebaseAuth auth = FirebaseAuth.getInstance();
     FirebaseUser currentUser = auth.getCurrentUser();
+    private final Handler mHandler = new Handler();
 
-    protected void retriveNotes(FirebaseUser currentUser){
-        // Assuming "notes" is your collection name
+    public void retriveNotes(FirebaseUser currentUser){
+        mHandler.post(() -> {
+            //dummyNotes.clear();
+            if (currentUser != null)      {
             db.collection(currentUser.getEmail())
                     .get()
                     .addOnCompleteListener(task -> {
@@ -66,6 +68,7 @@ public class MainActivity extends AppCompatActivity {
                             // Handle errors here
                         }
                     });
+        }});
 
     }
 

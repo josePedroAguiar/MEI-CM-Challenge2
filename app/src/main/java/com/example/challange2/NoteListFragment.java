@@ -41,6 +41,7 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
 
     List<Note> dummyNotes = new ArrayList<>();
     NoteListAdapter noteListAdapter;
+
     EditText titleEditText;
     Note note;
 
@@ -55,19 +56,20 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_notelist, container, false);
-        /*Button clearFilterButton;
+        Button clearFilterButton;
         clearFilterButton = view.findViewById(R.id.clearFilterButton);
         noteListAdapter = new NoteListAdapter(dummyNotes);
+        /*
         if(noteListAdapter.getFilterPattern().equals(""))
             clearFilterButton.setVisibility(View.INVISIBLE);
         else
             clearFilterButton.setVisibility(View.VISIBLE);
-        clearFilterButton.setOnClickListener(new View.OnClickListener() {
+        */clearFilterButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 onClearFilterButtonClick(v);
             }
-        });*/
+        });
         //ArrayList<ImageButton>buttons=setupToolbarButtons(R.drawable.baseline_add_24, R.drawable.baseline_search_24);
         /*buttons.get(0).setOnClickListener(new View.OnClickListener() {
             @Override

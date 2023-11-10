@@ -3,11 +3,13 @@ package com.example.challange2;
 import android.app.AlertDialog;
 import android.os.Bundle;
 import android.text.InputType;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -22,6 +24,9 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.challange2.note.Note;
 import com.example.challange2.note.NoteListAdapter;
+import com.google.firebase.crashlytics.internal.Logger;
+import java.util.Date;
+
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -29,13 +34,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 
 
 public class NoteListFragment extends Fragment implements NoteListAdapter.OnNoteClickListener, NoteListAdapter.OnNoteLongClickListener {
 
     List<Note> dummyNotes = new ArrayList<>();
     NoteListAdapter noteListAdapter;
-
     EditText titleEditText;
     Note note;
 
@@ -91,6 +96,10 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
 
         if (getActivity() instanceof AppCompatActivity) {
             ((AppCompatActivity) getActivity()).setSupportActionBar(toolbar);
+            ((MainActivity) requireActivity()).sortNotesByDate(dummyNotes);
+            ((MainActivity) requireActivity()).sortNotesByDate(((MainActivity) requireActivity()).dummyNotes);
+            ((MainActivity) requireActivity()).sortNotesByDate(((MainActivity) requireActivity()).originalDummyNotes);
+
         }
 
 
@@ -102,10 +111,14 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
         super.onViewCreated(view, savedInstanceState);
         setHasOptionsMenu(true);
 
+
         // Dummy data (replace with actual data source)
         if (getActivity() instanceof MainActivity) {
             dummyNotes = ((MainActivity) getActivity()).dummyNotes;
-            sortNotesByTitle(dummyNotes);
+            ((MainActivity) requireActivity()).sortNotesByDate(dummyNotes);
+            ((MainActivity) requireActivity()).sortNotesByDate(((MainActivity) requireActivity()).dummyNotes);
+            ((MainActivity) requireActivity()).sortNotesByDate(((MainActivity) requireActivity()).originalDummyNotes);
+            Log.d("NoteListFragment", "dummyNotes: " + dummyNotes);
         }
 
         // Set up RecyclerView
@@ -116,6 +129,8 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
         noteListAdapter.setOnNoteClickListener(this);
         noteListAdapter.setOnNoteLongClickListener(this);
 
+        Button clearFilterButton = view.findViewById(R.id.clearFilterButton);
+        clearFilterButton.setOnClickListener(this::onClearFilterButtonClick);
     }
 
     public void onNoteClick(int position) {
@@ -137,6 +152,9 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
         transaction.commit();
 
 
+
+
+
     }
 
     @Override
@@ -148,10 +166,16 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
                         case 0:
                             // Erase Note
                             eraseNote(position);
+                            //((MainActivity) requireActivity()).sortNotesByDate(dummyNotes);
                             break;
                         case 1:
                             // Change Title
+                            ((MainActivity) requireActivity()).sortNotesByDate(((MainActivity) requireActivity()).dummyNotes);
+                            ((MainActivity) requireActivity()).sortNotesByDate(((MainActivity) requireActivity()).originalDummyNotes);
                             changeTitle(position);
+
+
+
                             break;
                         default:
                             // Nothing
@@ -167,11 +191,11 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
         //TODO: Implement the logic to erase the note
         // Remove the note from the list
         Note noteToRemove = dummyNotes.get(position);
-        dummyNotes.remove(position);
+
+        ((MainActivity) requireActivity()).eraseNoteInFirestore(noteToRemove);
 
         // Notify the adapter that the data set has changed
         noteListAdapter.notifyDataSetChanged();
-        ((MainActivity) requireActivity()).eraseNoteInFirestore(noteToRemove);
 
 
     }
@@ -194,11 +218,11 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
                 dummyNotes.get(position).setTitle(newTitle);
                 Date currentDate = Calendar.getInstance().getTime();
                 dummyNotes.get(position).setDate(currentDate);
-
+                ((MainActivity) requireActivity()).updateNoteTitleInFirestore(position);
                 // Notify the adapter that the data set has changed
                 noteListAdapter.notifyDataSetChanged();
-                ((MainActivity) requireActivity()).updateNoteTitleInFirestore(position);
 
+                refreshFragment();
 
             }
         });
@@ -210,25 +234,39 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
 
 
     private void onClearFilterButtonClick(View view) {
-        // Implement the logic to clear the filter here
+        // Implemente a lógica para limpar o filtro aqui
+
         if (noteListAdapter != null) {
-            noteListAdapter.setNotes(dummyNotes);
+            // Restaura as notas originais
+            List<Note> originalDummyNotes = new ArrayList<>(((MainActivity) requireActivity()).originalDummyNotes);
+            ((MainActivity) requireActivity()).sortNotesByDate(originalDummyNotes);
+
+            dummyNotes = originalDummyNotes;
+            ((MainActivity) requireActivity()).sortNotesByDate(dummyNotes);
+
+
+
+            ((MainActivity) requireActivity()).dummyNotes = originalDummyNotes;
+
+            noteListAdapter.setNotes(originalDummyNotes);
             noteListAdapter.notifyDataSetChanged();
-            noteListAdapter.setFilterPattern(""); // Passing an empty string will clear the filter
-
-
+            noteListAdapter.setFilterPattern(""); // Passar uma string vazia irá limpar o filtro
+            //((MainActivity) requireActivity()).sortNotesByDate(dummyNotes);
+            ((MainActivity) requireActivity()).sortNotesByDate(((MainActivity) requireActivity()).dummyNotes);
+            ((MainActivity) requireActivity()).sortNotesByDate(((MainActivity) requireActivity()).originalDummyNotes);
         }
     }
 
-    private void sortNotesByTitle(List<Note> notes) {
-        Collections.sort(notes, new Comparator<Note>() {
-            @Override
-            public int compare(Note note1, Note note2) {
-                // Comparação decrescente usando a data
-                return note2.getDate().compareTo(note1.getDate());
-            }
-        });
+    private void refreshFragment() {
+        // Sort the notes by date
+        ((MainActivity) requireActivity()).sortNotesByDate(dummyNotes);
+
+        // Notify the adapter that the data set has changed
+        if (noteListAdapter != null) {
+            noteListAdapter.notifyDataSetChanged();
+        }
     }
+
 
 
 }

@@ -1,5 +1,7 @@
 package com.example.challange2.note;
 
+import androidx.annotation.NonNull;
+
 import java.util.Date;
 
 public class Note {
@@ -7,6 +9,9 @@ public class Note {
     private String content;
     private String Id;
     private Date date;
+
+    public Note() {
+    }
 
     public Note(String title, String content) {
         this.title = title;
@@ -57,6 +62,12 @@ public class Note {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    @NonNull
+    @Override
+    public String toString() {
+        return "Title: " + title + "content: " + content;
     }
 }
 

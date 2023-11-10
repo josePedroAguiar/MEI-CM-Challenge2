@@ -91,6 +91,7 @@ public class NoteDetailFragment extends Fragment {
             updatedNote.setDate(currentDate);
             note=updatedNote;
             ((MainActivity) requireActivity()).dummyNotes.set(position, updatedNote);
+            ((MainActivity) requireActivity()).originalDummyNotes.set(position, updatedNote);
 
             // Notify the adapter that the data set has changed
             ((MainActivity) requireActivity()).homeFragment.noteListAdapter.notifyDataSetChanged();

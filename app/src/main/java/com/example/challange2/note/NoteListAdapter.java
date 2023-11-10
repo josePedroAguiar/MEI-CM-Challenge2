@@ -28,12 +28,15 @@ public class NoteListAdapter extends RecyclerView.Adapter<NoteViewHolder> implem
     private  String filterPattern="";
     private OnNoteLongClickListener onNoteLongClickListener;
 
+    private List<Note> originalNotes;
+
 
     // Constructor and other methods
 
     public NoteListAdapter(List<Note> notes) {
         this.notes = notes;
     }
+
     public interface OnNoteClickListener {
         void onNoteClick(int position);
     }
@@ -96,21 +99,18 @@ public class NoteListAdapter extends RecyclerView.Adapter<NoteViewHolder> implem
         return new Filter() {
             @Override
             protected FilterResults performFiltering(CharSequence constraint) {
-                filterPattern=constraint.toString().toLowerCase().trim();;
-                String filterPattern = constraint.toString().toLowerCase().trim();
+                filterPattern = constraint.toString().toLowerCase().trim();
 
                 List<Note> filteredList = new ArrayList<>();
 
                 if (filterPattern.isEmpty()) {
-                    filteredList.addAll(notes);
+                    filteredList.addAll(notes); // Use the original list when filter is empty
                 } else {
-                    if(filteredList!=null){
                     for (Note note : notes) {
                         if (note.getTitle().toLowerCase().contains(filterPattern)) {
                             filteredList.add(note);
                         }
                     }
-                }
                 }
 
                 FilterResults results = new FilterResults();
@@ -121,11 +121,13 @@ public class NoteListAdapter extends RecyclerView.Adapter<NoteViewHolder> implem
             @Override
             protected void publishResults(CharSequence constraint, FilterResults results) {
                 notes.clear();  // Clear the previous filtered results
-                notes.addAll((List) results.values);
+                notes.addAll((List<Note>) results.values);
                 notifyDataSetChanged();
             }
         };
     }
+
+
 
     public List<Note> getFilteredNotes() {
         return filteredNotes;

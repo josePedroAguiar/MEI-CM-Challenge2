@@ -26,6 +26,8 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -38,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     FirebaseFirestore db = FirebaseFirestore.getInstance();
     FirebaseAuth auth = FirebaseAuth.getInstance();
     FirebaseUser currentUser = auth.getCurrentUser();
+    List<Note> originalDummyNotes = new ArrayList<>();
 
     Handler mainHandler = new Handler(Looper.getMainLooper());  // Crie o Handler na thread principal
 
@@ -60,7 +63,9 @@ public class MainActivity extends AppCompatActivity {
                                 String title = (String) document.get("title");
                                 String content = (String) document.get("content");
                                 Timestamp date = (Timestamp) document.get("date");
-                                dummyNotes.add(new Note(title, content, document.getId(), date.toDate()));
+                                Note note = new Note(title, content, document.getId(), date.toDate());
+                                dummyNotes.add(note);
+                                originalDummyNotes.add(note);
 
                                 Log.d("Debug", "title: " + title);
                                 Log.d("Debug", "Retrieved notes: " + dummyNotes.size());
@@ -172,10 +177,13 @@ public class MainActivity extends AppCompatActivity {
         if (item.getItemId() == R.id.action_new_note) {
             // Handle search action
             addNewNote("New Title", "");
+
             NoteListFragment nodeListFragment = (NoteListFragment) getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
             if (nodeListFragment != null) {
                 nodeListFragment.onNoteClick(dummyNotes.size() - 1); // Replace 'position' with the actual position you want to pass
+
             }
+
             return true;
         }
         if (item.getItemId() == R.id.action_back) {
@@ -185,6 +193,7 @@ public class MainActivity extends AppCompatActivity {
         if (item.getItemId() == R.id.action_save) {
 
             updateNoteInFirestore();
+
             //noteDetailFragment.saveNote();
             return true;
         }
@@ -205,6 +214,7 @@ public class MainActivity extends AppCompatActivity {
         Date currentDate = Calendar.getInstance().getTime();
         newNote.setDate(currentDate);
         dummyNotes.add(newNote);
+        originalDummyNotes.add(newNote);
         mainHandler.post(() -> {
             if (currentUser != null) {
                 db.collection(currentUser.getEmail())
@@ -226,6 +236,7 @@ public class MainActivity extends AppCompatActivity {
 
             }
         });
+
     }
 
 
@@ -242,8 +253,6 @@ public class MainActivity extends AppCompatActivity {
             String searchQuery = input.getText().toString().trim();
             if (!searchQuery.isEmpty()) {
                 homeFragment.noteListAdapter.getFilter().filter(searchQuery);
-
-
             }
         });
 
@@ -251,6 +260,7 @@ public class MainActivity extends AppCompatActivity {
 
         builder.show();
     }
+
 
     public void back() {
         Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
@@ -273,7 +283,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 
-    private void updateNoteInFirestore() {
+    public void updateNoteInFirestore() {
         mainHandler.post(() -> {
             NoteDetailFragment noteDetailFragment = (NoteDetailFragment) getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
             noteDetailFragment.saveChanges();
@@ -282,7 +292,7 @@ public class MainActivity extends AppCompatActivity {
 
             db.collection(currentUser.getEmail())
                     .document(note.getId())
-                    .update("title", note.getTitle(), "content", note.getContent())
+                    .update("title", note.getTitle(), "content", note.getContent(),"date", note.getDate())
                     .addOnSuccessListener(aVoid -> {
                         // Handle successful update
                     })
@@ -293,13 +303,14 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void updateNoteTitleInFirestore(int position) {
+        if (currentUser.getEmail() == null) return;
+        Note note = dummyNotes.get(position);
         mainHandler.post(() -> {
-            if (currentUser.getEmail() == null) return;
 
-            Note note = dummyNotes.get(position);
+
             db.collection(currentUser.getEmail())
                     .document(note.getId())
-                    .update("title", note.getTitle())
+                    .update("title", note.getTitle(), "content", note.getContent(),"date", note.getDate())
                     .addOnSuccessListener(aVoid -> {
                         // Handle successful update
                     })
@@ -310,8 +321,10 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void eraseNoteInFirestore(Note note) {
-
         if (currentUser.getEmail() == null) return;
+
+        dummyNotes.remove(note);
+        originalDummyNotes.remove(note);
         mainHandler.post(() -> {
             db.collection(currentUser.getEmail())
                     .document(note.getId())
@@ -324,6 +337,16 @@ public class MainActivity extends AppCompatActivity {
                         // Handle failed update
 
                     });
+        });
+    }
+
+    public void sortNotesByDate(List<Note> notes) {
+        Collections.sort(notes, new Comparator<Note>() {
+            @Override
+            public int compare(Note note1, Note note2) {
+                // Comparação decrescente usando a data
+                return note2.getDate().compareTo(note1.getDate());
+            }
         });
     }
 

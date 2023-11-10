@@ -24,17 +24,11 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.challange2.note.Note;
 import com.example.challange2.note.NoteListAdapter;
-import com.google.firebase.crashlytics.internal.Logger;
-import java.util.Date;
-
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
-import java.util.Objects;
 
 
 public class NoteListFragment extends Fragment implements NoteListAdapter.OnNoteClickListener, NoteListAdapter.OnNoteLongClickListener {
@@ -64,7 +58,8 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
             clearFilterButton.setVisibility(View.INVISIBLE);
         else
             clearFilterButton.setVisibility(View.VISIBLE);
-        */clearFilterButton.setOnClickListener(new View.OnClickListener() {
+        */
+        clearFilterButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 onClearFilterButtonClick(v);
@@ -137,7 +132,9 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
 
     public void onNoteClick(int position) {
         // Navigate to NoteDetailFragment and pass the selected note's data as arguments
+
         Bundle args = new Bundle();
+        Log.d("NoteListFragment", "position: " + position);
         NoteDetailFragment noteDetailFragment = new NoteDetailFragment();
         args.putInt("position", position);
         args.putString("title", dummyNotes.get(position).getTitle());
@@ -152,10 +149,6 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
         transaction.replace(R.id.fragmentContainer, noteDetailFragment);
         transaction.addToBackStack(null); // Add to back stack
         transaction.commit();
-
-
-
-
 
     }
 
@@ -175,7 +168,6 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
                             ((MainActivity) requireActivity()).sortNotesByDate(((MainActivity) requireActivity()).dummyNotes);
                             ((MainActivity) requireActivity()).sortNotesByDate(((MainActivity) requireActivity()).originalDummyNotes);
                             changeTitle(position);
-
 
 
                             break;
@@ -242,10 +234,8 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
             // Restaura as notas originais
             List<Note> originalDummyNotes = new ArrayList<>(((MainActivity) requireActivity()).originalDummyNotes);
             ((MainActivity) requireActivity()).sortNotesByDate(originalDummyNotes);
-
             dummyNotes = originalDummyNotes;
             ((MainActivity) requireActivity()).sortNotesByDate(dummyNotes);
-
 
 
             ((MainActivity) requireActivity()).dummyNotes = originalDummyNotes;
@@ -269,6 +259,9 @@ public class NoteListFragment extends Fragment implements NoteListAdapter.OnNote
         }
     }
 
-
-
+    public void updateNoteListAdapter() {
+        if (noteListAdapter != null) {
+            noteListAdapter.notifyDataSetChanged();
+        }
+    }
 }

@@ -67,7 +67,7 @@ public class Note {
     @NonNull
     @Override
     public String toString() {
-        return "Title: " + title + "content: " + content;
+        return "Title: " + title + " content: " + content;
     }
 }
 

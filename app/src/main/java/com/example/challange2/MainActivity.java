@@ -26,20 +26,17 @@ import com.google.firebase.firestore.QueryDocumentSnapshot;
 
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements LoginFragment.OnAuthenticationListener {
     public List<Note> dummyNotes = new ArrayList<>();
-    NoteListFragment homeFragment = new NoteListFragment();
     LoginFragment loginFragment = new LoginFragment();
     NoteDetailFragment noteDetailFragment = new NoteDetailFragment();
     FirebaseFirestore db = FirebaseFirestore.getInstance();
-    FirebaseAuth auth = FirebaseAuth.getInstance();
-    FirebaseUser currentUser = auth.getCurrentUser();
+
     List<Note> originalDummyNotes = new ArrayList<>();
 
     Handler mainHandler = new Handler(Looper.getMainLooper());  // Crie o Handler na thread principal
@@ -51,32 +48,34 @@ public class MainActivity extends AppCompatActivity {
 
     protected void retriveNotes(FirebaseUser currentUser) {
         // Assuming "notes" is your collection name
-        mainHandler.post(() -> {
-            db.collection(currentUser.getEmail())
-                    .orderBy("date", Query.Direction.DESCENDING)
-                    .get()
-                    .addOnCompleteListener(task -> {
+        mainHandler.post(() -> db.collection(Objects.requireNonNull(currentUser.getEmail()))
+                .orderBy("date", Query.Direction.DESCENDING)
+                .get()
+                .addOnCompleteListener(task -> {
 
-                        if (task.isSuccessful()) {
-                            for (QueryDocumentSnapshot document : task.getResult()) {
-                                // document.getData() will contain the note's data
-                                String title = (String) document.get("title");
-                                String content = (String) document.get("content");
-                                Timestamp date = (Timestamp) document.get("date");
-                                Note note = new Note(title, content, document.getId(), date.toDate());
-                                dummyNotes.add(note);
-                                originalDummyNotes.add(note);
+                    if (task.isSuccessful()) {
+                        for (QueryDocumentSnapshot document : task.getResult()) {
+                            // document.getData() will contain the note's data
+                            String title = (String) document.get("title");
+                            String content = (String) document.get("content");
+                            Timestamp date = (Timestamp) document.get("date");
+                            Note note = new Note(title, content, document.getId(), date.toDate());
+                            dummyNotes.add(note);
+                            originalDummyNotes.add(note);
 
-                                Log.d("Debug", "title: " + title);
-                                Log.d("Debug", "Retrieved notes: " + dummyNotes.size());
-                                homeFragment.noteListAdapter.notifyDataSetChanged();
+                            Log.d("Debug", "title: " + title);
+                            Log.d("Debug", "Retrieved notes: " + dummyNotes.size());
+                            NoteListFragment noteListFragment = getNoteListFragment();
+                            if (noteListFragment != null) {
+                                noteListFragment.updateNoteListAdapter();
                             }
-                        } else {
-                            Toast.makeText(this, dummyNotes.size(), Toast.LENGTH_SHORT).show();
-                            // Handle errors here
+
                         }
-                    });
-        });
+                    } else {
+                        Toast.makeText(this, dummyNotes.size(), Toast.LENGTH_SHORT).show();
+                        // Handle errors here
+                    }
+                }));
     }
 
     @Override
@@ -85,8 +84,7 @@ public class MainActivity extends AppCompatActivity {
 
         FirebaseApp.initializeApp(this);
         setContentView(R.layout.activity_main);
-        FirebaseAuth auth = FirebaseAuth.getInstance();
-        FirebaseUser currentUser = auth.getCurrentUser();
+        FirebaseUser currentUser = getCurrentUser();
 
         if (currentUser == null) {
             loadLoginFragment();
@@ -100,8 +98,8 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void loadLoginFragment() {
-        // Create a new instance of LoginFragment
-
+        // Set the authentication listener
+        loginFragment.setAuthenticationListener(this);
 
         // Get the FragmentManager and start a transaction
         FragmentManager fragmentManager = getSupportFragmentManager();
@@ -114,6 +112,20 @@ public class MainActivity extends AppCompatActivity {
         transaction.commit();
     }
 
+    @Override
+    public void onAuthenticationSuccess() {
+        // Handle the success of authentication (login or registration) here in MainActivity
+        // For instance, navigate to another fragment or perform other actions
+
+        FirebaseUser currentUser = getCurrentUser();
+        Log.d("onAuthenticationSuccess", "currentUser: " + currentUser.getEmail());
+        dummyNotes = new ArrayList<>();
+        originalDummyNotes = new ArrayList<>();
+        retriveNotes(currentUser);
+        Toast.makeText(this, currentUser.getEmail(), Toast.LENGTH_SHORT).show();
+
+    }
+
     private void loadHomeFragment() {
         // Create a new instance of HomeFragment
 
@@ -122,6 +134,7 @@ public class MainActivity extends AppCompatActivity {
         FragmentManager fragmentManager = getSupportFragmentManager();
         FragmentTransaction transaction = fragmentManager.beginTransaction();
 
+        NoteListFragment homeFragment = new NoteListFragment();
         // Replace the existing fragment (if any) with the new one
         transaction.replace(R.id.fragmentContainer, homeFragment);
 
@@ -204,8 +217,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void addNewNote(String title, String content) {
         String randomId = generateRandomUUID();
-        FirebaseAuth auth = FirebaseAuth.getInstance();
-        FirebaseUser currentUser = auth.getCurrentUser();
+        FirebaseUser currentUser = getCurrentUser();
 
         // Create a new Note object
         // Add the new note to the list
@@ -217,22 +229,20 @@ public class MainActivity extends AppCompatActivity {
         originalDummyNotes.add(newNote);
         mainHandler.post(() -> {
             if (currentUser != null) {
-                db.collection(currentUser.getEmail())
+                db.collection(Objects.requireNonNull(currentUser.getEmail()))
                         .document(randomId)
                         .set(newNote)
                         .addOnSuccessListener(documentReference -> {
-
                             // Operação bem-sucedida, notifique o adaptador na thread principal
-                            homeFragment.noteListAdapter.notifyDataSetChanged();
+                            NoteListFragment noteListFragment = getNoteListFragment();
+                            if (noteListFragment != null) {
+                                noteListFragment.updateNoteListAdapter();
+                            }
 
                         })
                         .addOnFailureListener(e -> {
 
                         });
-
-                // Notify the adapter that the data set has changed
-                NoteListFragment noteListFragment = (NoteListFragment) getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
-                noteListFragment.noteListAdapter.notifyDataSetChanged();
 
             }
         });
@@ -252,7 +262,10 @@ public class MainActivity extends AppCompatActivity {
         builder.setPositiveButton("Search", (dialog, which) -> {
             String searchQuery = input.getText().toString().trim();
             if (!searchQuery.isEmpty()) {
-                homeFragment.noteListAdapter.getFilter().filter(searchQuery);
+                NoteListFragment noteListFragment = getNoteListFragment();
+                if (noteListFragment != null) {
+                    noteListFragment.noteListAdapter.getFilter().filter(searchQuery);
+                }
             }
         });
 
@@ -270,6 +283,7 @@ public class MainActivity extends AppCompatActivity {
             for (int i = 0; i < backStackEntryCount; i++) {
                 fragmentManager.popBackStack();
             }
+            NoteListFragment homeFragment = new NoteListFragment();
             // If it is, navigate back to the NoteListFragment
             fragmentManager = getSupportFragmentManager();
             FragmentTransaction transaction = fragmentManager.beginTransaction();
@@ -284,71 +298,71 @@ public class MainActivity extends AppCompatActivity {
 
 
     public void updateNoteInFirestore() {
-        mainHandler.post(() -> {
-            NoteDetailFragment noteDetailFragment = (NoteDetailFragment) getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
-            noteDetailFragment.saveChanges();
-            Note note = dummyNotes.get(noteDetailFragment.position);
+        NoteDetailFragment noteDetailFragment = (NoteDetailFragment) getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
+        noteDetailFragment.saveChanges();
+        Note note = dummyNotes.get(0);
+        FirebaseUser currentUser = getCurrentUser();
 
-
-            db.collection(currentUser.getEmail())
-                    .document(note.getId())
-                    .update("title", note.getTitle(), "content", note.getContent(),"date", note.getDate())
-                    .addOnSuccessListener(aVoid -> {
-                        // Handle successful update
-                    })
-                    .addOnFailureListener(e -> {
-                        // Handle failed update
-                    });
-        });
+        mainHandler.post(() -> db.collection(Objects.requireNonNull(currentUser.getEmail()))
+                .document(note.getId())
+                .update("title", note.getTitle(), "content", note.getContent(), "date", note.getDate())
+                .addOnSuccessListener(aVoid -> {
+                    // Handle successful update
+                })
+                .addOnFailureListener(e -> {
+                    // Handle failed update
+                }));
     }
 
     void updateNoteTitleInFirestore(int position) {
+        FirebaseUser currentUser = getCurrentUser();
         if (currentUser.getEmail() == null) return;
         Note note = dummyNotes.get(position);
-        mainHandler.post(() -> {
-
-
-            db.collection(currentUser.getEmail())
-                    .document(note.getId())
-                    .update("title", note.getTitle(), "content", note.getContent(),"date", note.getDate())
-                    .addOnSuccessListener(aVoid -> {
-                        // Handle successful update
-                    })
-                    .addOnFailureListener(e -> {
-                        // Handle failed update
-                    });
-        });
+        mainHandler.post(() -> db.collection(currentUser.getEmail())
+                .document(note.getId())
+                .update("title", note.getTitle(), "content", note.getContent(), "date", note.getDate())
+                .addOnSuccessListener(aVoid -> {
+                    // Handle successful update
+                })
+                .addOnFailureListener(e -> {
+                    // Handle failed update
+                }));
     }
 
     void eraseNoteInFirestore(Note note) {
+        FirebaseUser currentUser = getCurrentUser();
         if (currentUser.getEmail() == null) return;
 
         dummyNotes.remove(note);
         originalDummyNotes.remove(note);
-        mainHandler.post(() -> {
-            db.collection(currentUser.getEmail())
-                    .document(note.getId())
-                    .delete()
-                    .addOnSuccessListener(aVoid -> {
-                        // Handle successful update
+        mainHandler.post(() -> db.collection(currentUser.getEmail())
+                .document(note.getId())
+                .delete()
+                .addOnSuccessListener(aVoid -> {
+                    // Handle successful update
 
-                    })
-                    .addOnFailureListener(e -> {
-                        // Handle failed update
+                })
+                .addOnFailureListener(e -> {
+                    // Handle failed update
 
-                    });
-        });
+                }));
     }
 
     public void sortNotesByDate(List<Note> notes) {
-        Collections.sort(notes, new Comparator<Note>() {
-            @Override
-            public int compare(Note note1, Note note2) {
-                // Comparação decrescente usando a data
-                return note2.getDate().compareTo(note1.getDate());
-            }
+        notes.sort((note1, note2) -> {
+            // Comparação decrescente usando a data
+            return note2.getDate().compareTo(note1.getDate());
         });
     }
 
+    private NoteListFragment getNoteListFragment() {
+        Fragment fragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
+        if (fragment instanceof NoteListFragment) return (NoteListFragment) fragment;
+        return null;
+    }
 
+    private FirebaseUser getCurrentUser() {
+        FirebaseAuth auth = FirebaseAuth.getInstance();
+        return auth.getCurrentUser();
+    }
 }

@@ -17,9 +17,5 @@
         android:icon="@drawable/baseline_search_24"
         android:title="Search"
         app:showAsAction="always" />
-    <item
-        android:id="@+id/action_clear_search"
-        android:title="Clear Search"
-        android:icon="@android:drawable/ic_menu_close_clear_cancel"
-        app:showAsAction="ifRoom" />
+
 </menu>

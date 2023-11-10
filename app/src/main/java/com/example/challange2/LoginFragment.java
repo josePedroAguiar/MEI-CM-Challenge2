@@ -1,6 +1,7 @@
 package com.example.challange2;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -22,6 +23,12 @@ public class LoginFragment extends Fragment {
     private Button registerButton;
     private FirebaseAuth mAuth;
 
+    private OnAuthenticationListener authenticationListener;
+
+    public void setAuthenticationListener(OnAuthenticationListener listener) {
+        this.authenticationListener = listener;
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,27 +45,21 @@ public class LoginFragment extends Fragment {
         loginButton = view.findViewById(R.id.loginButton);
         registerButton = view.findViewById(R.id.registerButton);
 
-        loginButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                String username = usernameEditText.getText().toString();
-                String password = passwordEditText.getText().toString();
-                if(!username.equals("") && !password.equals(""))
-                    loginUser(username, password);
-            }
+        loginButton.setOnClickListener(v -> {
+            String username = usernameEditText.getText().toString();
+            String password = passwordEditText.getText().toString();
+            if (!username.equals("") && !password.equals(""))
+                loginUser(username, password);
         });
 
-        registerButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // Navigate to the registration fragment or perform registration here
-                String username = usernameEditText.getText().toString();
-                String password = passwordEditText.getText().toString();
-                if(!username.equals("") && !password.equals(""))
-                    registerUser(username, password);
-            }
+        registerButton.setOnClickListener(v -> {
+            // Navigate to the registration fragment or perform registration here
+            String username = usernameEditText.getText().toString();
+            String password = passwordEditText.getText().toString();
+            if (!username.equals("") && !password.equals(""))
+                registerUser(username, password);
         });
-        
+
 
         return view;
     }
@@ -69,6 +70,12 @@ public class LoginFragment extends Fragment {
                     if (task.isSuccessful()) {
                         // Sign in success, navigate to the next fragment
                         // Replace "YourNextFragment" with the actual fragment you want to navigate to
+
+                        if (authenticationListener != null) {
+                            Log.d("LoginFragment", "login");
+                            authenticationListener.onAuthenticationSuccess();
+                        }
+
                         FragmentManager fragmentManager = getParentFragmentManager();
                         FragmentTransaction transaction = fragmentManager.beginTransaction();
 
@@ -77,12 +84,14 @@ public class LoginFragment extends Fragment {
                         transaction.addToBackStack(null);
 
                         transaction.commit();
+
                     } else {
                         // If sign in fails, display a message to the user.
                         Toast.makeText(getContext(), "Authentication failed.", Toast.LENGTH_SHORT).show();
                     }
                 });
     }
+
     private void registerUser(String email, String password) {
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(requireActivity(), task -> {
@@ -90,6 +99,10 @@ public class LoginFragment extends Fragment {
                         // Registration success, you can perform additional actions here if needed
                         // For example, you might want to save user information in a database
                         Toast.makeText(getContext(), "Registration successful.", Toast.LENGTH_SHORT).show();
+
+                        if (authenticationListener != null) {
+                            authenticationListener.onAuthenticationSuccess();
+                        }
 
                         // After successful registration, you can navigate to the next fragment
                         FragmentManager fragmentManager = getParentFragmentManager();
@@ -101,6 +114,7 @@ public class LoginFragment extends Fragment {
                         transaction.addToBackStack(null);
 
                         transaction.commit();
+
                     } else {
                         // If registration fails, display a message to the user.
                         Toast.makeText(getContext(), "Registration failed. " + task.getException().getMessage(), Toast.LENGTH_SHORT).show();
@@ -108,6 +122,8 @@ public class LoginFragment extends Fragment {
                 });
     }
 
-
+    public interface OnAuthenticationListener {
+        void onAuthenticationSuccess();
+    }
 
 }

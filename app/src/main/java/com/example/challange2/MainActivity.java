@@ -1,6 +1,11 @@
 package com.example.challange2;
 
 import android.app.AlertDialog;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.net.ConnectivityManager;
+import android.net.Network;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -10,6 +15,7 @@ import android.view.MenuItem;
 import android.widget.EditText;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -30,6 +36,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import com.google.gson.Gson;
+import java.lang.reflect.Type;
+import com.google.gson.reflect.TypeToken;
+
+
+
 
 public class MainActivity extends AppCompatActivity implements LoginFragment.OnAuthenticationListener {
     public List<Note> dummyNotes = new ArrayList<>();
@@ -41,46 +53,151 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
 
     Handler mainHandler = new Handler(Looper.getMainLooper());  // Crie o Handler na thread principal
 
+    private NetworkConnectivityListener connectivityListener;
+    private ConnectivityManager.NetworkCallback networkCallback;
+
+    private final Object retrieveNotesLock = new Object();
+
     public static String generateRandomUUID() {
         UUID uuid = UUID.randomUUID();
         return uuid.toString();
     }
 
+    private boolean isNetworkConnected() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+        return activeNetwork != null && activeNetwork.isConnectedOrConnecting();
+    }
+
+    private void saveNotesToInternalStorage(List<Note> notes) {
+        SharedPreferences preferences = getSharedPreferences("MyNotes", Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+
+        Gson gson = new Gson();
+        String notesJson = gson.toJson(notes);
+
+        editor.putString("notes", notesJson);
+        editor.apply();
+    }
+
+    private List<Note> readNotesFromInternalStorage() {
+        SharedPreferences preferences = getSharedPreferences("MyNotes", Context.MODE_PRIVATE);
+        String notesJson = preferences.getString("notes", null);
+
+        if (notesJson != null) {
+            Gson gson = new Gson();
+            Type listType = new TypeToken<List<Note>>() {}.getType();
+            return gson.fromJson(notesJson, listType);
+        }
+
+        return new ArrayList<>();
+    }
+
+    private void syncDataWithFirebase(FirebaseUser currentUser) {
+        List<Note> notesToSync = readNotesFromInternalStorage();
+        for (Note note : notesToSync) {
+            // Verifique se o documento já existe na coleção
+            mainHandler.post(() -> db.collection(Objects.requireNonNull(currentUser.getEmail()))
+                    .document(note.getId())
+                    .get()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            if (!task.getResult().exists()) {
+                                setNoteInFirebase(currentUser, note);
+                            }else{
+                                updateNoteInFirestore2(note);
+                            }
+                            removeNoteFromInternalStorage(note);
+                        }
+                    }));
+        }
+    }
+
+
+    private void removeNoteFromInternalStorage(Note note) {
+        List<Note> notesFromStorage = readNotesFromInternalStorage();
+        for (Note n : notesFromStorage) {
+            if (n.getId().equals(note.getId())) {
+                notesFromStorage.remove(n);
+                break;
+            }
+        }
+        saveNotesToInternalStorage(notesFromStorage);
+    }
+
+
     protected void retriveNotes(FirebaseUser currentUser) {
         // Assuming "notes" is your collection name
-        mainHandler.post(() -> db.collection(Objects.requireNonNull(currentUser.getEmail()))
-                .orderBy("date", Query.Direction.DESCENDING)
-                .get()
-                .addOnCompleteListener(task -> {
+        if (isNetworkConnected()) {
+            mainHandler.post(() -> db.collection(Objects.requireNonNull(currentUser.getEmail()))
+                    .orderBy("date", Query.Direction.DESCENDING)
+                    .get()
+                    .addOnCompleteListener(task -> {
+                        if (task.isSuccessful()) {
+                            for (QueryDocumentSnapshot document : task.getResult()) {
+                                // document.getData() will contain the note's data
+                                String title = (String) document.get("title");
+                                String content = (String) document.get("content");
+                                Timestamp date = (Timestamp) document.get("date");
+                                Note note = new Note(title, content, document.getId(), date.toDate());
 
-                    if (task.isSuccessful()) {
-                        for (QueryDocumentSnapshot document : task.getResult()) {
-                            // document.getData() will contain the note's data
-                            String title = (String) document.get("title");
-                            String content = (String) document.get("content");
-                            Timestamp date = (Timestamp) document.get("date");
-                            Note note = new Note(title, content, document.getId(), date.toDate());
-                            dummyNotes.add(note);
-                            originalDummyNotes.add(note);
+                                boolean isNoteExists = dummyNotes.stream().anyMatch(n -> n.getId().equals(note.getId()));
+                                if (!isNoteExists){
+                                    dummyNotes.add(note);
+                                    originalDummyNotes.add(note);
+                                }
 
-                            Log.d("Debug", "title: " + title);
-                            Log.d("Debug", "Retrieved notes: " + dummyNotes.size());
-                            NoteListFragment noteListFragment = getNoteListFragment();
-                            if (noteListFragment != null) {
-                                noteListFragment.updateNoteListAdapter();
+                                Log.d("Debug", "title: " + title);
+                                Log.d("Debug", "Retrieved notes: " + dummyNotes.size());
+                                NoteListFragment noteListFragment = getNoteListFragment();
+                                if (noteListFragment != null) {
+                                    noteListFragment.updateNoteListAdapter();
+                                }
+
                             }
-
+                        } else {
+                            Toast.makeText(this, dummyNotes.size(), Toast.LENGTH_SHORT).show();
+                            // Handle errors here
                         }
-                    } else {
-                        Toast.makeText(this, dummyNotes.size(), Toast.LENGTH_SHORT).show();
-                        // Handle errors here
-                    }
-                }));
+                    }));
+            //saveNotesToInternalStorage( originalDummyNotes);
+        }else {
+            List<Note> localNotes = readNotesFromInternalStorage();
+            dummyNotes.clear();
+            originalDummyNotes.clear();
+            dummyNotes.addAll(localNotes);
+            originalDummyNotes.addAll(localNotes);
+        }
     }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        connectivityListener = new NetworkConnectivityListener(this);
+
+        networkCallback = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onAvailable(@NonNull Network network) {
+                super.onAvailable(network);
+                Log.d("NetworkStatus", "Device is online.");
+                // Perform actions when the device becomes online
+                FirebaseUser currentUser = getCurrentUser();
+                syncDataWithFirebase(currentUser);
+                retriveNotes(currentUser);
+            }
+
+            @Override
+            public void onLost(@NonNull Network network) {
+                super.onLost(network);
+                Log.d("NetworkStatus", "Device is offline.");
+                // Perform actions when the device becomes offline
+                saveNotesToInternalStorage(dummyNotes);
+
+            }
+        };
+
+        connectivityListener.registerNetworkCallback(networkCallback);
 
         FirebaseApp.initializeApp(this);
         setContentView(R.layout.activity_main);
@@ -89,6 +206,9 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
         if (currentUser == null) {
             loadLoginFragment();
         } else {
+            if (isNetworkConnected()) {
+                syncDataWithFirebase(currentUser);
+            }
             retriveNotes(currentUser);
             Toast.makeText(this, currentUser.getEmail(), Toast.LENGTH_SHORT).show();
             loadHomeFragment();
@@ -114,15 +234,16 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
 
     @Override
     public void onAuthenticationSuccess() {
-        // Handle the success of authentication (login or registration) here in MainActivity
-        // For instance, navigate to another fragment or perform other actions
-
         FirebaseUser currentUser = getCurrentUser();
         Log.d("onAuthenticationSuccess", "currentUser: " + currentUser.getEmail());
         dummyNotes = new ArrayList<>();
         originalDummyNotes = new ArrayList<>();
+        if (isNetworkConnected()) {
+            syncDataWithFirebase(currentUser);
+        }
         retriveNotes(currentUser);
         Toast.makeText(this, currentUser.getEmail(), Toast.LENGTH_SHORT).show();
+
 
     }
 
@@ -144,26 +265,25 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
 
     @Override
     public void onBackPressed() {
-        // Get the current fragment
-
         Fragment currentFragment = getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
-
-        // Check if the current fragment is the HomeFragment
         if (currentFragment instanceof NoteListFragment) {
-            // Log out the user
             FirebaseAuth.getInstance().signOut();
-
             FragmentManager fragmentManager = getSupportFragmentManager();
             int backStackEntryCount = fragmentManager.getBackStackEntryCount();
             for (int i = 0; i < backStackEntryCount; i++) {
                 fragmentManager.popBackStack();
             }
 
+            if (isNetworkConnected()) {
+                FirebaseUser currentUser = getCurrentUser();
+                if (currentUser != null) {
+                    syncDataWithFirebase(currentUser);
+                }
+            }
 
             loadLoginFragment();
         } else {
-            //super.getSupportFragmentManager().popBackStack();
-            super.onBackPressed(); // If not on HomeFragment, proceed with default behavior
+            super.onBackPressed();
         }
     }
 
@@ -206,7 +326,7 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
         if (item.getItemId() == R.id.action_save) {
 
             updateNoteInFirestore();
-
+            back();
             //noteDetailFragment.saveNote();
             return true;
         }
@@ -227,28 +347,42 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
         newNote.setDate(currentDate);
         dummyNotes.add(newNote);
         originalDummyNotes.add(newNote);
-        mainHandler.post(() -> {
-            if (currentUser != null) {
-                db.collection(Objects.requireNonNull(currentUser.getEmail()))
-                        .document(randomId)
-                        .set(newNote)
-                        .addOnSuccessListener(documentReference -> {
-                            // Operação bem-sucedida, notifique o adaptador na thread principal
-                            NoteListFragment noteListFragment = getNoteListFragment();
-                            if (noteListFragment != null) {
-                                noteListFragment.updateNoteListAdapter();
-                            }
 
-                        })
-                        .addOnFailureListener(e -> {
-
-                        });
-
-            }
-        });
-
+        if (isNetworkConnected()) {
+            mainHandler.post(() -> {
+                if (currentUser != null) {
+                    db.collection(Objects.requireNonNull(currentUser.getEmail()))
+                            .document(randomId)
+                            .set(newNote)
+                            .addOnSuccessListener(documentReference -> {
+                                // Operação bem-sucedida, notifique o adaptador na thread principal
+                                NoteListFragment noteListFragment = getNoteListFragment();
+                                if (noteListFragment != null) {
+                                    noteListFragment.updateNoteListAdapter();
+                                }
+                            })
+                            .addOnFailureListener(e -> {
+                                // Handle failed database operation
+                            });
+                }
+            });
+        } else {
+            // A rede não está disponível, armazene a nota localmente
+            saveNoteToLocal(newNote);
+        }
     }
 
+    private void setNoteInFirebase(FirebaseUser currentUser, Note note) {
+        db.collection(currentUser.getEmail())
+                .document(note.getId())
+                .set(note)
+                .addOnSuccessListener(documentReference -> {
+                    Log.d("MainActivity", "Note----------" + note);
+                })
+                .addOnFailureListener(e -> {
+                    // Handle a falha na definição do documento
+                });
+    }
 
     public void showSearchDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
@@ -295,7 +429,28 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
         }
 
     }
+    public void updateNoteInFirestore2(Note note) {
 
+        FirebaseUser currentUser = getCurrentUser();
+
+        if (isNetworkConnected()) {
+            mainHandler.post(() -> {
+                db.collection(Objects.requireNonNull(currentUser.getEmail()))
+                        .document(note.getId())
+                        .update("title", note.getTitle(), "content", note.getContent(), "date", note.getDate())
+                        .addOnSuccessListener(aVoid -> {
+                            // Handle successful update
+                        })
+                        .addOnFailureListener(e -> {
+                            // Handle failed database operation
+                        });
+            });
+        } else {
+            // A rede não está disponível, atualize a nota localmente
+            updateNoteLocally(note);
+            //saveNoteToLocal(note);
+        }
+    }
 
     public void updateNoteInFirestore() {
         NoteDetailFragment noteDetailFragment = (NoteDetailFragment) getSupportFragmentManager().findFragmentById(R.id.fragmentContainer);
@@ -303,48 +458,83 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
         Note note = dummyNotes.get(0);
         FirebaseUser currentUser = getCurrentUser();
 
-        mainHandler.post(() -> db.collection(Objects.requireNonNull(currentUser.getEmail()))
-                .document(note.getId())
-                .update("title", note.getTitle(), "content", note.getContent(), "date", note.getDate())
-                .addOnSuccessListener(aVoid -> {
-                    // Handle successful update
-                })
-                .addOnFailureListener(e -> {
-                    // Handle failed update
-                }));
+        if (isNetworkConnected()) {
+            mainHandler.post(() -> {
+                db.collection(Objects.requireNonNull(currentUser.getEmail()))
+                        .document(note.getId())
+                        .update("title", note.getTitle(), "content", note.getContent(), "date", note.getDate())
+                        .addOnSuccessListener(aVoid -> {
+                            // Handle successful update
+                        })
+                        .addOnFailureListener(e -> {
+                            // Handle failed database operation
+                        });
+            });
+        } else {
+            // A rede não está disponível, atualize a nota localmente
+            updateNoteLocally(note);
+            //saveNoteToLocal(note);
+        }
     }
 
     void updateNoteTitleInFirestore(int position) {
         FirebaseUser currentUser = getCurrentUser();
         if (currentUser.getEmail() == null) return;
         Note note = dummyNotes.get(position);
-        mainHandler.post(() -> db.collection(currentUser.getEmail())
-                .document(note.getId())
-                .update("title", note.getTitle(), "content", note.getContent(), "date", note.getDate())
-                .addOnSuccessListener(aVoid -> {
-                    // Handle successful update
-                })
-                .addOnFailureListener(e -> {
-                    // Handle failed update
-                }));
+
+        if (isNetworkConnected()) {
+            mainHandler.post(() -> {
+                db.collection(currentUser.getEmail())
+                        .document(note.getId())
+                        .update("title", note.getTitle(), "content", note.getContent(), "date", note.getDate())
+                        .addOnSuccessListener(aVoid -> {
+                            // Handle successful update
+                        })
+                        .addOnFailureListener(e -> {
+                            // Handle failed database operation
+                        });
+            });
+        } else {
+            // A rede não está disponível, atualize a nota localmente
+            updateNoteLocally(note);
+            //saveNoteToLocal(note);
+
+        }
+    }
+
+    void saveNoteToLocal(Note note) {
+        List<Note> localNotes = readNotesFromInternalStorage();
+        localNotes.add(note);
+        saveNotesToInternalStorage(localNotes);
+    }
+
+    void updateNoteLocally(Note updatedNote) {
+        List<Note> localNotes = readNotesFromInternalStorage();
+        for (int i = 0; i < localNotes.size(); i++) {
+            if (localNotes.get(i).getId().equals(updatedNote.getId())) {
+                localNotes.set(i, updatedNote);
+                break;
+            }
+        }
+        saveNotesToInternalStorage(localNotes);
     }
 
     void eraseNoteInFirestore(Note note) {
+        dummyNotes.remove(note);
+        originalDummyNotes.remove(note);
+        removeNoteFromInternalStorage(note);
+
         FirebaseUser currentUser = getCurrentUser();
         if (currentUser.getEmail() == null) return;
 
-        dummyNotes.remove(note);
-        originalDummyNotes.remove(note);
         mainHandler.post(() -> db.collection(currentUser.getEmail())
                 .document(note.getId())
                 .delete()
                 .addOnSuccessListener(aVoid -> {
                     // Handle successful update
-
                 })
                 .addOnFailureListener(e -> {
                     // Handle failed update
-
                 }));
     }
 
@@ -364,5 +554,11 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
     private FirebaseUser getCurrentUser() {
         FirebaseAuth auth = FirebaseAuth.getInstance();
         return auth.getCurrentUser();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        connectivityListener.unregisterNetworkCallback(networkCallback);
     }
 }

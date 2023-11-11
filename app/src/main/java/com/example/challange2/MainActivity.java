@@ -16,6 +16,7 @@ import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
 
 import com.example.challange2.note.Note;
+import com.example.challange2.note.NotesManager;
 import com.google.firebase.FirebaseApp;
 import com.google.firebase.Timestamp;
 import com.google.firebase.auth.FirebaseAuth;
@@ -72,6 +73,7 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
 
                         }
                     } else {
+                        NotesManager.getNotes(this);
                         Toast.makeText(this, dummyNotes.size(), Toast.LENGTH_SHORT).show();
                         // Handle errors here
                     }
@@ -310,7 +312,7 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
                     // Handle successful update
                 })
                 .addOnFailureListener(e -> {
-                    // Handle failed update
+                    NotesManager.saveNotes(this, dummyNotes);
                 }));
     }
 
@@ -325,7 +327,7 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
                     // Handle successful update
                 })
                 .addOnFailureListener(e -> {
-                    // Handle failed update
+                    NotesManager.saveNotes(this, dummyNotes);
                 }));
     }
 
@@ -343,7 +345,7 @@ public class MainActivity extends AppCompatActivity implements LoginFragment.OnA
 
                 })
                 .addOnFailureListener(e -> {
-                    // Handle failed update
+                    NotesManager.saveNotes(this, dummyNotes);
 
                 }));
     }
